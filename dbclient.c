@@ -45,7 +45,7 @@ void PrintMessage(MSG* message);
 bool DEBUG = false;
 
 int main(int argc, char* argv[]) { //Overall control flow
-    if (argc != 3 || argc != 4) {
+    if (argc != 3 && argc != 4) {
         Usage(argv[0]);
     }
     if (argc == 4) {
