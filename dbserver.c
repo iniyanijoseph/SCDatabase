@@ -78,12 +78,12 @@ int main(int argc, char **argv) {
     }
 
     pthread_t clientThread;
-    HandleClientArgs args;
+    HandleClientArgs args; // Build argument list
     args.c_fd = client_fd;
     args.addr = (struct sockaddr *)(&caddr);
     args.addrnlen = caddr_len;
     args.sockfamily = sock_family;
-    pthread_create(&clientThread, NULL, HandleClient, (void*)&args);
+    pthread_create(&clientThread, NULL, HandleClient, (void*)&args); // Create thread for handling a client
   }
 
   // Close socket
@@ -275,8 +275,7 @@ int Listen(char *portnum, int *sock_family) {
   return listen_fd;
 }
 
-void*
-HandleClient(void *arg) {
+void* HandleClient(void *arg) {
   // Print out information about the client.
     HandleClientArgs* args = (HandleClientArgs*)arg;
     int c_fd = args->c_fd;
@@ -305,46 +304,27 @@ HandleClient(void *arg) {
         }
 
         //Stuff to send back to the client
-        msg messageRecord = message;
         switch (message.type){
             case GET:
-            if(DBGet(dbFD, &messageRecord.rd) == -1){
-                messageRecord.type=FAIL;
-                write(c_fd, &messageRecord, sizeof(msg));
-
-                // printf("Response ");
-                // PrintMessage(&messageRecord);
-                // printf("\n");
+            if(DBGet(dbFD, &message.rd) == -1){ // Get from server, failing if neccessary
+                message.type=FAIL;
+                write(c_fd, &message, sizeof(msg));
 
                 continue;
             }
-            messageRecord.type=SUCCESS;
+            message.type=SUCCESS; //Send back successful message
 
-            // printf("Response ");
-            // PrintMessage(&messageRecord);
-            // printf("\n");
-
-            write(c_fd, &messageRecord, sizeof(msg));
+            write(c_fd, &message, sizeof(msg));
             break;
 
             case PUT:
-            if(DBPut(dbFD, &messageRecord.rd) == -1){
-                messageRecord.type=FAIL;
-
-                // printf("Response ");
-                // PrintMessage(&messageRecord);
-                // printf("\n");
-
-                write(c_fd, &messageRecord, sizeof(msg));
+            if(DBPut(dbFD, &message.rd) == -1){ // Put into server, failing if neccessary
+                message.type=FAIL;
+                write(c_fd, &message, sizeof(msg));
                 continue;
             }
-            messageRecord.type=SUCCESS;
-            write(c_fd, &messageRecord, sizeof(msg));
-
-            // printf("Response ");
-            // PrintMessage(&messageRecord);
-            // printf("\n");
-
+            message.type=SUCCESS; //Send back successful message
+            write(c_fd, &message, sizeof(msg));
             break;
 
             default:
@@ -353,45 +333,45 @@ HandleClient(void *arg) {
     }
 
     close(c_fd);
-    pthread_exit(NULL);
+    pthread_exit(NULL); //Close thread
 }
 
-int DBGet(int32_t fd, record* message) {
+int DBGet(int32_t fd, record* rd) { //Get from database
     size_t record_size = sizeof(record);
-    int offs = lseek(fd, message->id*sizeof(record), SEEK_SET);
+    int offs = lseek(fd, rd->id*sizeof(record), SEEK_SET);
 
-    if(offs != message->id*sizeof(record)) {
+    if(offs != rd->id*sizeof(record)) { //Make sure we got the right number of bytes
         return -1;
     }
 
-    int nameRead = read(fd, message, record_size);
+    int nameRead = read(fd, rd, record_size); //Read from db
     if(nameRead < record_size)
       return -1;
 
-    if(strcmp(message->name, " ") && message->id == 0){
+    if(strcmp(rd->name, " ") && rd->id == 0){ // If we are getting the values of a nonexistent database entry
       return -1;
     }
 
     return nameRead;
 }
 
-int DBPut(int32_t fd, record* message) {
+int DBPut(int32_t fd, record* rd) { // Put into database
     size_t record_size = sizeof(record);
-    lseek(fd, message->id*record_size, SEEK_SET);
-    int nameWrite = write(fd, message, record_size);
+    lseek(fd, rd->id*record_size, SEEK_SET);
+    int nameWrite = write(fd, rd, record_size);
     if(nameWrite == -1){
       return -1;
     }
     return nameWrite;
 }
 
-void PrintRecord(record *rd) {
+void PrintRecord(record *rd) { // Print record
     printf("Record{ ");
     printf("name:[%s] ", rd->name);
     printf("id:[%d] }", rd->id);
 }
 
-void PrintMessage(msg* message){
+void PrintMessage(msg* message){ //Print message
     printf("Message{ Type:[%d] ", message->type);
     PrintRecord(&message->rd);
     printf("}");

@@ -42,7 +42,7 @@ char *getInput();
 void PrintRecord(RD *record);
 void PrintMessage(MSG* message);
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) { //Overall control flow
     if (argc != 3) {
         Usage(argv[0]);
     }
@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
 
     // Step 4) use read(server_fd) and write(server_fd)
     startUserShell(server_fd);
-    
+
     // Step 5) Close(server_fd)
     printf("Thanks for using dbcilent\n");
     close(server_fd);
@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
 }
 
 void Usage(char *progname) {
-    printf("usage: %s hostname port \n", progname);
+    printf("usage: %s hostname port \n", progname); //Verify correctness
     exit(1);
 }
 
@@ -96,19 +96,19 @@ bool mayfail(int result, int expect) {
     return result >= expect;
 }
 
-int LookupName(char *name, unsigned short port, struct sockaddr_storage *ret_addr, size_t *ret_addr_size) {
+int LookupName(char *name, unsigned short port, struct sockaddr_storage *ret_addr, size_t *ret_addr_size) { // Find server if it exists
     struct addrinfo hints, *results;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
-    int retval;
+    int retval; //Check if address is valid
     if ((retval = getaddrinfo(name, NULL, &hints, &results)) != 0) {
         printf("getaddrinfo failed: %s", gai_strerror(retval));
         exit(1);
     }
 
-    if (results->ai_family == AF_INET) {
+    if (results->ai_family == AF_INET) { //Attempt gettingconnection information if possible
         struct sockaddr_in *v4addr = (struct sockaddr_in *) (results->ai_addr);
         v4addr->sin_port = htons(port);
     } else if (results->ai_family == AF_INET6) {
@@ -134,9 +134,9 @@ int Connect(struct sockaddr_storage *server_addr, size_t server_addr_len, int *s
     int socket_fd;
     mayfail((socket_fd = socket(server_addr->ss_family, SOCK_STREAM, 0)), 0);
 
-    // Step 3 connect the socket 
+    // Step 3 connect the socket
     mayfail(connect(socket_fd, (SA*)server_addr, server_addr_len), 0);
-    *server_fd = socket_fd; 
+    *server_fd = socket_fd;
     return 0;
 }
 
@@ -166,7 +166,7 @@ void startUserShell(int server_fd) {
             running = false;
             break;
         case PUT:
-            request.type = PUT;
+            request.type = PUT; // Handle put method
             printf("Enter the name: ");
             char *name = getInput();
             strcpy(record.name, name);
@@ -174,20 +174,16 @@ void startUserShell(int server_fd) {
 
             printf("Enter the id: ");
             char *IDstr = getInput();
-            record.id = atoi(IDstr); // no input validation for now
+            record.id = atoi(IDstr);
             request.rd = record;
             free(IDstr);
 
             request.rd = record;
             nbytes = write(server_fd, &request, sizeof(MSG)); // write may fail
 
-            // printf("Request ");
-            // PrintMessage(&request);
-            // printf("\n");
-
             waitForResponse(server_fd, &response);
             switch (response.type) {
-            case SUCCESS:
+            case SUCCESS: //Succeed or fail based on respons from server
                 printf("put success.\n");
                 break;
             case FAIL:
@@ -198,7 +194,7 @@ void startUserShell(int server_fd) {
                 break;
             }
             break;
-        case GET:
+        case GET: // Print out the message needed based on the type of request we send and what we got back
             request.type = GET;
             printf("Enter the id: ");
             IDstr = getInput();
@@ -209,11 +205,8 @@ void startUserShell(int server_fd) {
             nbytes = write(server_fd, &request, sizeof(MSG)); // write may fail
             waitForResponse(server_fd, &response);
 
-            // printf("Request ");
-            // PrintMessage(&request);
-            // printf("\n");
 
-            switch (response.type) {
+            switch (response.type) { //Perform action based on succes/failure of get
             case SUCCESS:
                 printf("name: %s\n", response.rd.name);
                 printf("id: %d\n", response.rd.id);
@@ -244,7 +237,7 @@ bool isInteger(char* number) {
     return true;
 }
 
-char *getInput() {
+char *getInput() { //Read from stdin
     size_t bufferSize = BUFFSIZE;
     char *line = (char*)malloc(sizeof(char) * bufferSize);
     ssize_t bytesRead;
@@ -255,7 +248,7 @@ char *getInput() {
     return line;
 }
 
-bool isValidPortString(char *portStr) {
+bool isValidPortString(char *portStr) { //Check if port string is valid
     if (!isInteger(portStr)) {
         return false;
     }
@@ -263,16 +256,16 @@ bool isValidPortString(char *portStr) {
     return 0 < port && port <= USHRT_MAX;
 }
 
-int waitForResponse(int server_fd, MSG *response) {
+int waitForResponse(int server_fd, MSG *response) { //Wait for server response
     printf("Waiting on a message from the server...\n");
     int status = UNDEFINED;
     while (true) {
         ssize_t result = read(server_fd, response, sizeof(MSG));
-        if (result == 0) {
+        if (result == 0) { //Handle if server disconnects
             status = response->type;
             printf("server has disconnected\n");
             break;
-        } else if (result < 0) {
+        } else if (result < 0) { //Handle error
             if ((errno == EAGAIN) || (errno == EINTR)) {
                 continue;
             }
@@ -287,13 +280,13 @@ int waitForResponse(int server_fd, MSG *response) {
 }
 
 
-void PrintRecord(RD *record) {
+void PrintRecord(RD *record) { //Print record
     printf("Record{ ");
     printf("name:[%s] ", record->name);
     printf("id:[%d] }", record->id);
 }
 
-void PrintMessage(MSG* message){
+void PrintMessage(MSG* message){ //Print message
     printf("Message{ Type:[%d] ", message->type);
     PrintRecord(&message->rd);
     printf(" }");
