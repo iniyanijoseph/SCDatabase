@@ -42,9 +42,14 @@ char *getInput();
 void PrintRecord(RD *record);
 void PrintMessage(MSG* message);
 
+bool DEBUG = false;
+
 int main(int argc, char* argv[]) { //Overall control flow
-    if (argc != 3) {
+    if (argc != 3 || argc != 4) {
         Usage(argv[0]);
+    }
+    if (argc == 4) {
+        DEBUG = true;
     }
 
     // Step 1) Get IP address and port
@@ -69,7 +74,7 @@ int main(int argc, char* argv[]) { //Overall control flow
 }
 
 void Usage(char *progname) {
-    printf("usage: %s hostname port \n", progname); //Verify correctness
+    printf("usage: %s hostname port [debug]\n", progname); //Verify correctness
     exit(1);
 }
 
@@ -162,7 +167,6 @@ void startUserShell(int server_fd) {
         size_t nbytes;
         switch (inputInt) {
         case EXIT:
-            printf("You entered EXIT\n");
             running = false;
             break;
         case PUT:
@@ -180,8 +184,18 @@ void startUserShell(int server_fd) {
 
             request.rd = record;
             nbytes = write(server_fd, &request, sizeof(MSG)); // write may fail
+            if (DEBUG == true) {
+                printf("Request: ");
+                PrintMessage(&request);
+                printf("\n");
+            }
 
             waitForResponse(server_fd, &response);
+            if (DEBUG == true) {
+                printf("Response: ");
+                PrintMessage(&response);
+                printf("\n");
+            }
             switch (response.type) {
             case SUCCESS: //Succeed or fail based on respons from server
                 printf("put success.\n");
@@ -203,8 +217,18 @@ void startUserShell(int server_fd) {
 
             request.rd = record;
             nbytes = write(server_fd, &request, sizeof(MSG)); // write may fail
-            waitForResponse(server_fd, &response);
+            if (DEBUG == true) {
+                printf("Request: ");
+                PrintMessage(&request);
+                printf("\n");
+            }
 
+            waitForResponse(server_fd, &response);
+            if (DEBUG == true) {
+                printf("Response: ");
+                PrintMessage(&response);
+                printf("\n");
+            }
 
             switch (response.type) { //Perform action based on succes/failure of get
             case SUCCESS:
