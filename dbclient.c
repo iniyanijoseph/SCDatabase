@@ -42,14 +42,9 @@ char *getInput();
 void PrintRecord(RD *record);
 void PrintMessage(MSG* message);
 
-bool DEBUG = false;
-
-int main(int argc, char* argv[]) { //Overall control flow
-    if (argc != 3 && argc != 4) {
+int main(int argc, char* argv[]) {
+    if (argc != 3) {
         Usage(argv[0]);
-    }
-    if (argc == 4) {
-        DEBUG = true;
     }
 
     // Step 1) Get IP address and port
@@ -74,7 +69,7 @@ int main(int argc, char* argv[]) { //Overall control flow
 }
 
 void Usage(char *progname) {
-    printf("usage: %s hostname port [debug]\n", progname); //Verify correctness
+    printf("usage: %s hostname port \n", progname);
     exit(1);
 }
 
@@ -101,19 +96,19 @@ bool mayfail(int result, int expect) {
     return result >= expect;
 }
 
-int LookupName(char *name, unsigned short port, struct sockaddr_storage *ret_addr, size_t *ret_addr_size) { // Find server if it exists
+int LookupName(char *name, unsigned short port, struct sockaddr_storage *ret_addr, size_t *ret_addr_size) {
     struct addrinfo hints, *results;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
-    int retval; //Check if address is valid
+    int retval;
     if ((retval = getaddrinfo(name, NULL, &hints, &results)) != 0) {
         printf("getaddrinfo failed: %s", gai_strerror(retval));
         exit(1);
     }
 
-    if (results->ai_family == AF_INET) { //Attempt gettingconnection information if possible
+    if (results->ai_family == AF_INET) {
         struct sockaddr_in *v4addr = (struct sockaddr_in *) (results->ai_addr);
         v4addr->sin_port = htons(port);
     } else if (results->ai_family == AF_INET6) {
@@ -156,10 +151,11 @@ void startUserShell(int server_fd) {
             inputInt = atoi(inputString);
             if (!isInteger(inputString)) {
                 printf("You entered [%s]. Input must be either 0, 1, or 2\n", inputString);
-                free(inputString);
+                //free(inputString);
             }
         }
-        free(inputString);
+        inputString = "";
+        //free(inputString);
 
         MSG request = {0};
         MSG response = {0};
@@ -167,10 +163,11 @@ void startUserShell(int server_fd) {
         size_t nbytes;
         switch (inputInt) {
         case EXIT:
+            printf("You entered EXIT\n");
             running = false;
             break;
         case PUT:
-            request.type = PUT; // Handle put method
+            request.type = PUT;
             printf("Enter the name: ");
             char *name = getInput();
             strcpy(record.name, name);
@@ -178,26 +175,20 @@ void startUserShell(int server_fd) {
 
             printf("Enter the id: ");
             char *IDstr = getInput();
-            record.id = atoi(IDstr);
+            record.id = atoi(IDstr); // no input validation for now
             request.rd = record;
             free(IDstr);
 
             request.rd = record;
             nbytes = write(server_fd, &request, sizeof(MSG)); // write may fail
-            if (DEBUG == true) {
-                printf("Request: ");
-                PrintMessage(&request);
-                printf("\n");
-            }
+
+            // printf("Request ");
+            // PrintMessage(&request);
+            // printf("\n");
 
             waitForResponse(server_fd, &response);
-            if (DEBUG == true) {
-                printf("Response: ");
-                PrintMessage(&response);
-                printf("\n");
-            }
             switch (response.type) {
-            case SUCCESS: //Succeed or fail based on respons from server
+            case SUCCESS:
                 printf("put success.\n");
                 break;
             case FAIL:
@@ -208,7 +199,7 @@ void startUserShell(int server_fd) {
                 break;
             }
             break;
-        case GET: // Print out the message needed based on the type of request we send and what we got back
+        case GET:
             request.type = GET;
             printf("Enter the id: ");
             IDstr = getInput();
@@ -217,20 +208,13 @@ void startUserShell(int server_fd) {
 
             request.rd = record;
             nbytes = write(server_fd, &request, sizeof(MSG)); // write may fail
-            if (DEBUG == true) {
-                printf("Request: ");
-                PrintMessage(&request);
-                printf("\n");
-            }
-
             waitForResponse(server_fd, &response);
-            if (DEBUG == true) {
-                printf("Response: ");
-                PrintMessage(&response);
-                printf("\n");
-            }
 
-            switch (response.type) { //Perform action based on succes/failure of get
+            // printf("Request ");
+            // PrintMessage(&request);
+            // printf("\n");
+
+            switch (response.type) {
             case SUCCESS:
                 printf("name: %s\n", response.rd.name);
                 printf("id: %d\n", response.rd.id);
@@ -261,7 +245,7 @@ bool isInteger(char* number) {
     return true;
 }
 
-char *getInput() { //Read from stdin
+char *getInput() {
     size_t bufferSize = BUFFSIZE;
     char *line = (char*)malloc(sizeof(char) * bufferSize);
     ssize_t bytesRead;
@@ -272,7 +256,7 @@ char *getInput() { //Read from stdin
     return line;
 }
 
-bool isValidPortString(char *portStr) { //Check if port string is valid
+bool isValidPortString(char *portStr) {
     if (!isInteger(portStr)) {
         return false;
     }
@@ -280,16 +264,16 @@ bool isValidPortString(char *portStr) { //Check if port string is valid
     return 0 < port && port <= USHRT_MAX;
 }
 
-int waitForResponse(int server_fd, MSG *response) { //Wait for server response
+int waitForResponse(int server_fd, MSG *response) {
     printf("Waiting on a message from the server...\n");
     int status = UNDEFINED;
     while (true) {
         ssize_t result = read(server_fd, response, sizeof(MSG));
-        if (result == 0) { //Handle if server disconnects
+        if (result == 0) {
             status = response->type;
             printf("server has disconnected\n");
             break;
-        } else if (result < 0) { //Handle error
+        } else if (result < 0) {
             if ((errno == EAGAIN) || (errno == EINTR)) {
                 continue;
             }
@@ -304,13 +288,13 @@ int waitForResponse(int server_fd, MSG *response) { //Wait for server response
 }
 
 
-void PrintRecord(RD *record) { //Print record
+void PrintRecord(RD *record) {
     printf("Record{ ");
     printf("name:[%s] ", record->name);
     printf("id:[%d] }", record->id);
 }
 
-void PrintMessage(MSG* message){ //Print message
+void PrintMessage(MSG* message){
     printf("Message{ Type:[%d] ", message->type);
     PrintRecord(&message->rd);
     printf(" }");
