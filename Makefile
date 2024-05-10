@@ -9,8 +9,5 @@ dbclient.o: msg.h dbclient.c
 	gcc -c dbclient.c
 
 clean:
-	rm dbserver.o
-	rm dbclient.o
-	rm dbclient
-	rm dbserver
+	rm -f dbserver.o dbclient.o dbclient dbserver
 
