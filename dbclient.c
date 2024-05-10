@@ -162,10 +162,9 @@ void startUserShell(int server_fd) {
         }
         MSG request = {0};
         MSG response = {0};
-        RD record = {0};
-        size_t nbytes;
-        char name[BUFFSIZE];
-        name[0] = '\0';
+        RD record = {{}};
+        //char name[BUFFSIZE];
+        //name[0] = '\0';
         char IDstr[BUFFSIZE];
         IDstr[0] = '\0';
         switch (inputInt) {
@@ -180,7 +179,7 @@ void startUserShell(int server_fd) {
             getInput(IDstr);
             record.id = atoi(IDstr);
             request.rd = record;
-            nbytes = write(server_fd, &request, sizeof(MSG)); // write may fail
+            write(server_fd, &request, sizeof(MSG)); // write may fail
             if (DEBUG == true) {
                 printf("Request: ");
                 PrintMessage(&request);
@@ -210,7 +209,7 @@ void startUserShell(int server_fd) {
             getInput(IDstr);
             record.id = atoi(IDstr);
             request.rd = record;
-            nbytes = write(server_fd, &request, sizeof(MSG)); // write may fail
+            write(server_fd, &request, sizeof(MSG)); // write may fail
             if (DEBUG == true) {
                 printf("Request: ");
                 PrintMessage(&request);
