@@ -348,8 +348,8 @@ int DBGet(int32_t fd, record* rd) { //Get from database
     if(nameRead < record_size)
       return -1;
 
-    if(strcmp(rd->name, " ") && rd->id == 0){ // If we are getting the values of a nonexistent database entry
-      return -1;
+    if(strcmp(rd->name, "") == 0 && rd->id == 0){ // If we are getting the values of a nonexistent database entry
+        return -1;
     }
 
     return nameRead;

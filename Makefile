@@ -3,14 +3,10 @@ all: dbserver.o dbclient.o
 	gcc dbclient.o -o dbclient -Wall -Werror -std=gnu99
 
 dbserver.o: msg.h dbserver.c
-	gcc -c dbserver.c
+	gcc -c dbserver.c -Wall -Werror -std=gnu99 -pthread
 
 dbclient.o: msg.h dbclient.c
-	gcc -c dbclient.c
+	gcc -c dbclient.c -Wall -Werror -std=gnu99
 
 clean:
-	rm dbserver.o
-	rm dbclient.o
-	rm dbclient
-	rm dbserver
-
+	rm -f dbserver.o dbclient.o dbclient dbserver
